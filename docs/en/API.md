@@ -745,9 +745,18 @@ The API server can be configured using environment variables:
 | `ACESTEP_CONFIG_PATH2` | (empty) | Secondary DiT model path (optional) |
 | `ACESTEP_CONFIG_PATH3` | (empty) | Third DiT model path (optional) |
 | `ACESTEP_DEVICE` | `auto` | Device for model loading |
+| `ACESTEP_MPS_LOW_MEMORY` | `false` | Opt-in MPS mode: load DiT and text encoder directly as bfloat16 and disable duplicate MLX DiT/VAE backends. Requires macOS 14 or newer; unsupported systems fail before loading. CPU/CUDA/XPU behavior is unchanged. |
 | `ACESTEP_USE_FLASH_ATTENTION` | `true` | Enable flash attention |
 | `ACESTEP_OFFLOAD_TO_CPU` | `false` | Offload models to CPU when idle |
 | `ACESTEP_OFFLOAD_DIT_TO_CPU` | `false` | Offload DiT specifically to CPU |
+
+Enable `ACESTEP_MPS_LOW_MEMORY=true` before starting a fresh API process. Restart
+instead of switching an already loaded MLX process: its previous allocations can
+overlap the new model's load. The VAE keeps its existing MPS/CPU precision policy.
+This mode trades MLX acceleration for reduced model memory; generation speed and
+available duration still depend on free system memory. It does not enable the LM
+or guarantee that arbitrary batch sizes fit. An unsupported BF16 operation fails
+normally rather than silently reloading a float32 model.
 
 ### LM Configuration
 
