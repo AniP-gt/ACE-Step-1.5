@@ -92,11 +92,15 @@ class InitServiceLoaderComponentsMixin:
             raise FileNotFoundError(f"Text encoder not found at {text_encoder_path}")
 
         self.text_tokenizer = AutoTokenizer.from_pretrained(text_encoder_path)
-        self.text_encoder = AutoModel.from_pretrained(text_encoder_path)
+        low_memory = device == "mps" and getattr(self, "mps_low_memory", False)
+        if low_memory:
+            self.text_encoder = AutoModel.from_pretrained(text_encoder_path, dtype=self.dtype)
+        else:
+            self.text_encoder = AutoModel.from_pretrained(text_encoder_path)
         if not self.offload_to_cpu:
             self.text_encoder = self.text_encoder.to(device).to(self.dtype)
         else:
-            cpu_dtype = self._get_vae_dtype("cpu")
+            cpu_dtype = self.dtype if low_memory else self._get_vae_dtype("cpu")
             self.text_encoder = self.text_encoder.to("cpu").to(cpu_dtype)
         self.text_encoder.eval()
         return text_encoder_path

@@ -119,6 +119,13 @@ class InitServiceSetupMixin:
         mlx_compile_requested: bool,
     ) -> Tuple[str, str]:
         """Initialize MLX DiT/VAE integrations and return status labels."""
+        if device == "mps" and getattr(self, "mps_low_memory", False):
+            self.mlx_decoder = None
+            self.mlx_vae = None
+            self.use_mlx_dit = False
+            self.use_mlx_vae = False
+            self.mlx_dit_compiled = False
+            return "Disabled (MPS low-memory mode)", "Disabled (MPS low-memory mode)"
         mlx_dit_status = "Disabled"
         if use_mlx_dit and device in ("mps", "cpu"):
             mlx_ok = self._init_mlx_dit(compile_model=mlx_compile_requested)
