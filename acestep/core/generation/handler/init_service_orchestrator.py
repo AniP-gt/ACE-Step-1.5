@@ -73,6 +73,13 @@ class InitServiceOrchestratorMixin:
 
             resolved_device = self._resolve_initialize_device(device)
             self.device = resolved_device
+            self.mps_low_memory = resolved_device == "mps" and os.environ.get(
+                "ACESTEP_MPS_LOW_MEMORY", "false"
+            ).strip().lower() in {"1", "true", "yes", "on"}
+            if self.mps_low_memory and not torch.backends.mps.is_macos_or_newer(14, 0):
+                raise RuntimeError(
+                    f"ACESTEP_MPS_LOW_MEMORY requires macOS 14 or newer for {resolved_device} bfloat16."
+                )
             self.offload_to_cpu = offload_to_cpu
             self.offload_dit_to_cpu = offload_dit_to_cpu
 
@@ -99,6 +106,12 @@ class InitServiceOrchestratorMixin:
                     )
             else:
                 self.dtype = torch.bfloat16 if resolved_device == "xpu" else torch.float32
+            if self.mps_low_memory:
+                self.dtype = torch.bfloat16
+                logger.info(
+                    "[initialize_service] MPS low-memory mode: bfloat16 DiT/text weights; "
+                    "MLX DiT/VAE disabled to avoid duplicate model allocations."
+                )
             self.quantization = normalized_quantization
             try:
                 self._validate_quantization_setup(
